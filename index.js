@@ -26,6 +26,32 @@ app.listen(port, ()=>{
     console.log('서버가 돌아가고 있습니다.')
 })
 
+
+//이미지 업로드
+app.use("/upload", express.static("upload"));
+
+const storage = multer.diskStorage({
+    destination: "./upload/",
+    filename: function(req, file, cb) {
+        cb(null, file.originalname);  
+    }
+  });
+
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: 10000000 }
+});
+
+//대표이미지 등록
+app.post("/upload", upload.array('imgs'), function(req, res, next) {
+    res.send({
+    p_img: req.files[0].filename,
+    p_detail: req.files[1].filename
+    });
+});
+
+
+
 //상품등록하기
 app.post("/addProduct", async (req,res)=>{
     const {p_name, p_intro, p_price, p_part1, p_part2, p_option, p_img, p_detail, p_keyword } = req.body;
@@ -36,27 +62,6 @@ app.post("/addProduct", async (req,res)=>{
             console.log(rows);
         })
         res.send("등록되었습니다.")
-})
-
-//이미지 저장
-const storage = multer.diskStorage({
-    destination:function(req,res,cb){
-        cb(null, 'public/img/')
-    },
-    filename:function(req,file,cb){
-        cb(null, file.originalname);
-    }
-})
-
-//파일사이즈 지정
-const upload = multer({
-    storage:storage,
-    limits:{fileSize:30000000}
-})
-
-//사진 서버로 받기
-app.post("/upload", async (req,res)=>{
-    console.log(req.body)
 })
 
 
@@ -109,8 +114,72 @@ app.post("/login", async (req,res)=>{
     })
 })
 
-//상품리스트 출력
-app.get("/products/:part", async (req,res)=>{
+//상품리스트 출력(검색 또는 카테고리로 이동시)
+app.get("/products/:keyword", async (req,res)=>{
     console.log(req.params)
-    // connection.query(`select * from products where part1 = ``)
+    const params = req.params
+    const {keyword} = params
+    console.log(keyword)
+    connection.query(
+        //SELECT * FROM products where p_part1 like '%치석%' or p_part2 like '%치석%' or p_keyword like '%치석%';
+        `select * from products where p_part1 like '%${keyword}%' or p_part2 like '%${keyword}%' or p_keyword like '%${keyword}%'`,
+        (err,rows,fields)=>{
+            console.log(rows);
+            res.send(rows);
+        }
+    )
+})
+
+//상품 상세페이지로 이동
+app.get("/detail/:no", async (req,res)=>{
+    console.log(req.params)
+    const params = req.params
+    const {no} = params
+    console.log(no)
+    connection.query(`select * from products where no = '${no}'`,
+    (err,rows,fields)=>{
+        console.log(rows);
+        res.send(rows[0])
+    })
+})
+
+//장바구니 담기
+app.post("/cart/:id", async (req,res)=>{
+    console.log(req.params)
+    const params = req.params
+    // console.log(req.body)
+    const {id} = params
+    if(req.body.length>1){
+        req.body.map(cart=>(
+            connection.query("insert into cart (`userId`,`p_name`,`p_opt`,`p_qty`,`p_price`,`t_price`,`p_img`,`isChecked`) values(?,?,?,?,?,?,?,?)",
+            [id, cart.p_name, cart.optname, cart.qty, cart.price, cart.price2, cart.img, cart.isChecked],
+            (err,rows,fields)=>{
+            })
+        ))
+    }
+else{
+        const [{p_name, optname, qty, price, price2, img, isChecked}] = req.body
+        console.log(optname)
+        connection.query("insert into cart (`userId`,`p_name`,`p_opt`,`p_qty`,`p_price`,`t_price`,`p_img`,`isChecked`) values(?,?,?,?,?,?,?,?)",
+        [id,p_name,optname,qty,price,price2,img,isChecked],
+        (err,rows,fields)=>{
+        })
+    }
+ })
+
+//장바구니 조회
+app.post("/mycart/:id", async (req,res)=>{
+    const params = req.params
+    const {id} = params
+    connection.query(`select * from cart where userId = '${id}'`,
+    (err,rows,fields)=>{
+        res.send(rows)
+    })
+})
+
+//장바구니 삭제
+app.post("/mycartdelete/:id", async (req,res)=>{
+    const params = req.params
+    const {id} = params
+    console.log(req.body)
 })
