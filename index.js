@@ -44,9 +44,10 @@ const upload = multer({
 
 //대표이미지 등록
 app.post("/upload", upload.array('imgs'), function(req, res, next) {
+    const imgfile = [];
+    req.files.map((img)=> imgfile.push(img.filename))
     res.send({
-    p_img: req.files[0].filename,
-    p_detail: req.files[1].filename
+    imgs : imgfile
     });
 });
 
@@ -151,17 +152,17 @@ app.post("/cart/:id", async (req,res)=>{
     const {id} = params
     if(req.body.length>1){
         req.body.map(cart=>(
-            connection.query("insert into cart (`userId`,`p_name`,`p_opt`,`p_qty`,`p_price`,`t_price`,`p_img`,`isChecked`) values(?,?,?,?,?,?,?,?)",
-            [id, cart.p_name, cart.optname, cart.qty, cart.price, cart.price2, cart.img, cart.isChecked],
+            connection.query("insert into cart (`userId`,`p_name`,`p_opt`,`p_qty`,`p_price`,`t_price`,`p_img`) values(?,?,?,?,?,?,?)",
+            [id, cart.p_name, cart.optname, cart.qty, cart.price, cart.price2, cart.img],
             (err,rows,fields)=>{
             })
         ))
     }
 else{
-        const [{p_name, optname, qty, price, price2, img, isChecked}] = req.body
+        const [{p_name, optname, qty, price, price2, img}] = req.body
         console.log(optname)
-        connection.query("insert into cart (`userId`,`p_name`,`p_opt`,`p_qty`,`p_price`,`t_price`,`p_img`,`isChecked`) values(?,?,?,?,?,?,?,?)",
-        [id,p_name,optname,qty,price,price2,img,isChecked],
+        connection.query("insert into cart (`userId`,`p_name`,`p_opt`,`p_qty`,`p_price`,`t_price`,`p_img`) values(?,?,?,?,?,?,?)",
+        [id,p_name,optname,qty,price,price2,img],
         (err,rows,fields)=>{
         })
     }
@@ -182,4 +183,89 @@ app.post("/mycartdelete/:id", async (req,res)=>{
     const params = req.params
     const {id} = params
     console.log(req.body)
+    if(req.body.length>=1){
+        req.body.map(cart=>(
+            connection.query(`delete from cart where no ='${cart.no}'`,
+            (err,rows,fields)=>{
+            })
+        ))
+    }
+})
+
+//주문 테이블로 넘기고, 주문한 제품은 장바구니에서 삭제하기
+app.post("/myorder/:id", async (req,res)=>{
+    const params = req.params
+    const {id} = params
+    if(req.body.length>=1){
+        const p_names = (req.body.map(data=>(data.p_name))).join(',');
+        const prices = req.body.reduce(function(init,opt){
+        return init+Number(opt.t_price)
+        },0);
+        console.log(p_names,prices)
+        console.log(req.body)
+        connection.query("insert into orders (`userId`,`p_name`,`order_price`) values(?,?,?);",
+        [id, p_names, String(prices)],
+        (err,rows,fields)=>{
+            res.send(rows[0])
+        })
+        req.body.map(cart=>(
+            connection.query(`delete from cart where no ='${cart.no}';`,
+            (err,rows,fields)=>{
+            })
+        ))
+    }
+    
+})
+
+//마이페이지에 주문내역 출력하기
+app.get("/myorders/:id", async (req,res)=>{
+    const {id} = req.params;
+    console.log(id)
+    connection.query(`select * from orders where userId = '${id}'`,
+    (err,rows,fields)=>{
+        console.log(rows)
+        res.send(rows)
+    })
+})
+
+
+//마이페이지 작성리뷰 출력하기
+app.get("/myreview/:id", async (req,res)=>{
+    const {id} = req.params;
+    connection.query(`select * from reviews where userId = '${id}'`,
+    (err,rows,fields)=>{
+        console.log(rows)
+        res.send(rows)
+    })
+})
+
+
+//리뷰 작성
+app.post("/review", async (req,res)=>{
+    console.log(req.body);
+    const {p_name, title, desc, img, userId, date} = req.body;
+    connection.query("insert into reviews (`p_name`,`title`,`desc`,`img`,`userId`,`date`) values(?,?,?,?,?,?)",
+    [p_name,title,desc,img,userId,date],
+    (err,rows,fields)=>{
+        res.send(rows)
+    })
+})
+
+
+//제품 상세페이지에서 해당 제품의 리뷰들을 출력하기
+app.get("/review/:product", async (req,res)=>{
+    const {product} = req.params;
+    connection.query(`select * from reviews where p_name = '${product}'`,
+    (err,rows,fields)=>{
+        res.send(rows)
+    })
+})
+
+//메인화면에서 포토리뷰만 출력하기
+app.post("/photoreview", async (req,res)=>{
+    connection.query(`select * from reviews where not img = ''`,
+    (err,rows,fields)=>{
+        res.send(rows)
+        console.log(rows)
+    })
 })
