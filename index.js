@@ -123,7 +123,7 @@ app.get("/products/:keyword", async (req,res)=>{
     console.log(keyword)
     connection.query(
         //SELECT * FROM products where p_part1 like '%치석%' or p_part2 like '%치석%' or p_keyword like '%치석%';
-        `select * from products where p_part1 like '%${keyword}%' or p_part2 like '%${keyword}%' or p_keyword like '%${keyword}%'`,
+        `select * from products where p_part1 like '%${keyword}%' or p_part2 like '%${keyword}%' or p_keyword like '%${keyword}%' or p_name like '%${keyword}%'`,
         (err,rows,fields)=>{
             console.log(rows);
             res.send(rows);
@@ -239,6 +239,15 @@ app.get("/myreview/:id", async (req,res)=>{
     })
 })
 
+//1대1 문의 마이페이지에서 출력하기
+app.get("/mypersonalQ/:id",async (req,res)=>{
+    const {id} = req.params;
+    connection.query(`select * from personal_q where id = '${id}'`,
+    (err,rows,fields)=>{
+        res.send(rows)
+    })
+})
+
 
 //리뷰 작성
 app.post("/review", async (req,res)=>{
@@ -263,9 +272,52 @@ app.get("/review/:product", async (req,res)=>{
 
 //메인화면에서 포토리뷰만 출력하기
 app.post("/photoreview", async (req,res)=>{
-    connection.query(`select * from reviews where not img = ''`,
+    connection.query(`select * from reviews where not img = '' order by no desc limit 10`,
     (err,rows,fields)=>{
         res.send(rows)
         console.log(rows)
+    })
+})
+
+//1대1 문의 작성하기
+app.post("/personalQnA", async (req,res)=>{
+    const {id,title,desc} = req.body;
+    connection.query("insert into personal_q (`id`,`title`,`desc`) values(?,?,?)",
+    [id,title,desc],
+    (err,rows,fields)=>{
+        res.send(rows)
+    })
+})
+
+//모든 1대1문의 리스트 출력하기(관리자 모드에서)
+app.get("/adminpersonalQ/",async (req,res)=>{
+    connection.query(`select * from personal_q`,
+    (err,rows,fields)=>{
+        res.send(rows)
+    })
+})
+
+//1대1문의 답변 작성
+app.post("/adminreq", async (req,res)=>{
+    const {requ,no} = req.body;
+    connection.query(`update personal_q set req = '${requ}' where no = ${no}`,
+    (err,rows,fields)=>{
+        res.send(rows)
+    })
+})
+
+//공지사항 출력
+app.get("/notice", async (req,res)=>{
+    connection.query('select * from notice',
+    (err,rows,fields)=>{
+        res.send(rows)
+    })
+})
+
+//fnq 출력
+app.get("/fnq", async (req,res)=>{
+    connection.query('select * from fnq',
+    (err,rows,fields)=>{
+        res.send(rows)
     })
 })
