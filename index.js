@@ -1,7 +1,7 @@
 const express = require ("express")
 const cors = require("cors")
 const app = express();
-const port = 3001;
+const port = process.env.PORT || 8080;
 const mysql = require("mysql");
 const fs = require("fs");
 const multer = require("multer");
@@ -25,6 +25,7 @@ app.use(cors());
 app.listen(port, ()=>{
     console.log('서버가 돌아가고 있습니다.')
 })
+
 
 
 //이미지 업로드
