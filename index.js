@@ -122,14 +122,32 @@ app.get("/products/:keyword", async (req,res)=>{
     const params = req.params
     const {keyword} = params
     console.log(keyword)
-    connection.query(
-        //SELECT * FROM products where p_part1 like '%치석%' or p_part2 like '%치석%' or p_keyword like '%치석%';
-        `select * from products where p_part1 like '%${keyword}%' or p_part2 like '%${keyword}%' or p_keyword like '%${keyword}%' or p_name like '%${keyword}%'`,
-        (err,rows,fields)=>{
-            console.log(rows);
-            res.send(rows);
-        }
-    )
+    if(keyword==='reviewbest'){
+        //리뷰베스트 수정 -> 리뷰베스트일 경우 reivews 테이블에서 p_name이 가장 많은 순으로 product 테이블에서 가져오기
+        connection.query(
+            `SELECT p.* FROM products p
+            INNER JOIN (
+                SELECT p_name, COUNT(*) as review_count
+                FROM review
+                GROUP BY p_name
+                ORDER BY review_count DESC
+            ) as r ON p.p_name = r.p_name`,
+            (err, rows, fields) => {
+                console.log(rows);
+                res.send(rows);
+            }
+        )
+    }else{
+        connection.query(
+            //SELECT * FROM products where p_part1 like '%치석%' or p_part2 like '%치석%' or p_keyword like '%치석%';
+            `select * from products where p_part1 like '%${keyword}%' or p_part2 like '%${keyword}%' or p_keyword like '%${keyword}%' or p_name like '%${keyword}%'`,
+            (err,rows,fields)=>{
+                console.log(err);
+                res.send(rows);
+            }
+        )
+    }
+
 })
 
 //상품 상세페이지로 이동
