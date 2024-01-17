@@ -125,13 +125,14 @@ app.get("/products/:keyword", async (req,res)=>{
     if(keyword==='reviewbest'){
         //리뷰베스트 수정 -> 리뷰베스트일 경우 reivews 테이블에서 p_name이 가장 많은 순으로 product 테이블에서 가져오기
         connection.query(
-            `SELECT p.* FROM products p
-            INNER JOIN (
-                SELECT p_name, COUNT(*) as review_count
-                FROM review
+            `SELECT products.*
+            FROM products
+            JOIN (
+                SELECT p_name, COUNT(*) as count
+                FROM reviews
                 GROUP BY p_name
-                ORDER BY review_count DESC
-            ) as r ON p.p_name = r.p_name`,
+                ORDER BY count DESC
+            ) as sorted_reviews ON products.p_name = sorted_reviews.p_name`,
             (err, rows, fields) => {
                 console.log(rows);
                 res.send(rows);
